@@ -1,0 +1,14 @@
+!.gitignore
+!.cursorignore
+!.env
+!.env.example
+!.env.local
+!.env.development.local
+!.env.test.local
+!.env.production.local
+!.env.development
+!.env.test
+!.env.production
+data/downloads/
+data/benign/
+data/malignant/

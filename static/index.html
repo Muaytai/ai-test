@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Doctor — Анализ родинок и меланом</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;1,9..40,400&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f12;
+      --surface: #161a20;
+      --border: #2a3038;
+      --text: #e6e9ef;
+      --text-muted: #8b92a0;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 14px;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+    .disclaimer {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin-bottom: 2rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    .disclaimer strong { color: var(--warning); }
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.06);
+    }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-zone .icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+      opacity: 0.8;
+    }
+    .upload-zone p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .upload-zone p strong { color: var(--text); }
+    .preview {
+      margin-bottom: 1.5rem;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .preview img {
+      width: 100%;
+      display: block;
+      max-height: 320px;
+      object-fit: contain;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 0.875rem 1.5rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      width: 100%;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+    .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+    .result {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .result.risk {
+      border-color: rgba(239, 68, 68, 0.5);
+      background: rgba(239, 68, 68, 0.08);
+    }
+    .result.safe {
+      border-color: rgba(34, 197, 94, 0.5);
+      background: rgba(34, 197, 94, 0.06);
+    }
+    .result h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .result.risk h3 { color: var(--danger); }
+    .result.safe h3 { color: var(--success); }
+    .result .confidence {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+    .result .message {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI Doctor</h1>
+    <p class="subtitle">Предварительная оценка родинок и подозрительных образований по фото</p>
+    <div class="disclaimer">
+      <strong>Важно:</strong> это не медицинская диагностика. Результат носит информационный характер и не заменяет осмотр врача. При любых сомнениях или изменениях родинки обращайтесь к дерматологу или онкологу.
+    </div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="icon">📷</div>
+      <p><strong>Загрузите фото</strong> кожного образования</p>
+      <p>JPG, PNG или другой формат изображения</p>
+    </div>
+    <div class="preview hidden" id="preview">
+      <img id="previewImg" src="" alt="Превью">
+    </div>
+    <button type="button" class="btn btn-primary" id="analyzeBtn" disabled>
+      Анализировать
+    </button>
+    <div class="result hidden" id="result"></div>
+  </div>
+  <script>
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const previewImg = document.getElementById('previewImg');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const resultEl = document.getElementById('result');
+
+    let selectedFile = null;
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const f = e.dataTransfer?.files?.[0];
+      if (f && f.type.startsWith('image/')) setFile(f);
+    });
+    fileInput.addEventListener('change', () => {
+      const f = fileInput.files?.[0];
+      if (f) setFile(f);
+    });
+
+    function setFile(file) {
+      selectedFile = file;
+      previewImg.src = URL.createObjectURL(file);
+      preview.classList.remove('hidden');
+      resultEl.classList.add('hidden');
+      analyzeBtn.disabled = false;
+    }
+
+    analyzeBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      analyzeBtn.disabled = true;
+      analyzeBtn.innerHTML = '<span class="loading"></span> Анализ...';
+      resultEl.classList.add('hidden');
+
+      const form = new FormData();
+      form.append('file', selectedFile);
+
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          body: form,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Ошибка запроса');
+        showResult(data);
+      } catch (err) {
+        resultEl.className = 'result risk';
+        resultEl.innerHTML = '<h3>Ошибка</h3><p class="message">' + (err.message || 'Не удалось выполнить анализ. Проверьте подключение и формат файла.') + '</p>';
+        resultEl.classList.remove('hidden');
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = 'Анализировать';
+      }
+    });
+
+    function showResult(data) {
+      const isRisk = data.is_risk;
+      resultEl.className = 'result ' + (isRisk ? 'risk' : 'safe');
+      const label = isRisk ? 'Подозрительное образование' : 'Доброкачественное образование';
+      const conf = (data.confidence * 100).toFixed(1);
+      resultEl.innerHTML =
+        '<h3>' + (isRisk ? '⚠️ ' : '✓ ') + label + '</h3>' +
+        '<p class="confidence">Уверенность модели: ' + conf + '%</p>' +
+        '<p class="message">' + data.message + '</p>';
+      resultEl.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
